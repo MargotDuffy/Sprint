@@ -38,7 +38,399 @@
 	</div>
 	<div class="celebration-animation" id="celebration"></div>
 	<script>
-		// ...Full JavaScript from user code goes here...
+	let currentQuestionIndex = 0;
+	let score = 0;
+	let selectedMatchingItems = [];
+	let draggedElement = null;
+
+	const questions = [
+		{
+			type: 'multiple-choice',
+			question: 'Does cookie start with the letter C?',
+			options: ['Yes', 'No', 'A', 'An'],
+			correct: 0,
+			feedback: 'Great! Cookie starts with C! 🍪'
+		},
+		{
+			type: 'drag-drop',
+			question: 'Complete: "I _____ to school."',
+			sentence: 'I _____ to school.',
+			options: ['go', 'eat'],
+			correct: 'go',
+			feedback: 'Perfect! You GO to school! 🚌'
+		},
+		{
+			type: 'matching',
+			question: 'Match the words with pictures!',
+			words: ['cat', 'dog'],
+			pictures: ['🐱', '🐶'],
+			pairs: [['cat', '🐱'], ['dog', '🐶']],
+			feedback: 'Excellent matching! 🌟'
+		},
+		{
+			type: 'multiple-choice',
+			question: 'Does goat start with the letter C?',
+			options: ['yes', 'No', 'A', 'An'],
+			correct: 1,
+			feedback: 'Correct! Goat starts with G, not C! 🐐'
+		},
+		{
+			type: 'drag-drop',
+			question: 'Complete: "I _____ lunch."',
+			sentence: 'I _____ lunch.',
+			options: ['eat', 'go'],
+			correct: 'eat',
+			feedback: 'Good! You EAT lunch! 🍎'
+		},
+		{
+			type: 'multiple-choice',
+			question: 'Is this a girl?',
+			options: ['Yes', 'No', 'A', 'An'],
+			correct: 0,
+			feedback: 'Correct! It is a girl! 👧'
+		},
+		{
+			type: 'matching',
+			question: 'Match colors with pictures!',
+			words: ['red', 'blue'],
+			pictures: ['❤️', '💙'],
+			pairs: [['red', '❤️'], ['blue', '💙']],
+			feedback: 'Amazing! You know colors! 🎨'
+		},
+		{
+			type: 'drag-drop',
+			question: 'Complete: "I _____ home."',
+			sentence: 'I _____ home.',
+			options: ['go', 'eat'],
+			correct: 'go',
+			feedback: 'Right! You GO home! 🏠'
+		},
+		{
+			type: 'multiple-choice',
+			question: 'We say ___ apple.',
+			options: ['a', 'an', 'I', 'no'],
+			correct: 1,
+			feedback: 'Yes! We say AN apple! 🍎'
+		},
+		{
+			type: 'matching',
+			question: 'Match actions with pictures!',
+			words: ['eat', 'sleep'],
+			pictures: ['🍎', '😴'],
+			pairs: [['eat', '🍎'], ['sleep', '😴']],
+			feedback: 'Great job matching! 👏'
+		},
+		{
+			type: 'drag-drop',
+			question: 'Complete: "I am _____."',
+			sentence: 'I am _____.',
+			options: ['happy', 'sad'],
+			correct: 'happy',
+			feedback: 'Wonderful! You are HAPPY! 😊'
+		},
+		{
+			type: 'multiple-choice',
+			question: 'We say ___ dog.',
+			options: ['a', 'an', 'I', 'yes'],
+			correct: 0,
+			feedback: 'Correct! We say A dog! 🐶'
+		},
+		{
+			type: 'matching',
+			question: 'Match animals with pictures!',
+			words: ['bird', 'fish'],
+			pictures: ['🐦', '🐟'],
+			pairs: [['bird', '🐦'], ['fish', '🐟']],
+			feedback: 'Perfect! You know animals! 🐾'
+		},
+		{
+			type: 'drag-drop',
+			question: 'Complete: "I _____ English."',
+			sentence: 'I _____ English.',
+			options: ['study', 'eat'],
+			correct: 'study',
+			feedback: 'Excellent! You STUDY English! 📖'
+		},
+		{
+			type: 'multiple-choice',
+			question: 'Elmo ___ a cupcake.',
+			options: ['has', 'have', 'is', 'an'],
+			correct: 0,
+			feedback: 'Yes! Elmo HAS a cupcake! 🧁'
+		},
+		{
+			type: 'matching',
+			question: 'Match feelings with pictures!',
+			words: ['happy', 'sad'],
+			pictures: ['😊', '😢'],
+			pairs: [['happy', '😊'], ['sad', '😢']],
+			feedback: 'Amazing! You understand feelings! 💕'
+		}
+	];
+
+	function loadQuestion() {
+		const question = questions[currentQuestionIndex];
+		const questionEl = document.getElementById('question');
+		const optionsEl = document.getElementById('options');
+		const feedbackEl = document.getElementById('feedback');
+		const starsEl = document.getElementById('stars');
+		const nextBtn = document.getElementById('next-btn');
+
+		questionEl.textContent = question.question;
+		optionsEl.innerHTML = '';
+		feedbackEl.classList.remove('show', 'correct', 'incorrect');
+		starsEl.style.display = 'none';
+		nextBtn.classList.remove('show');
+
+		updateProgress();
+
+		if (question.type === 'multiple-choice') {
+			optionsEl.className = 'options multiple-choice';
+			question.options.forEach((option, index) => {
+				const button = document.createElement('div');
+				button.className = 'option';
+				button.textContent = option;
+				button.onclick = () => checkAnswer(index);
+				optionsEl.appendChild(button);
+			});
+		} else if (question.type === 'drag-drop') {
+			optionsEl.className = 'options drag-drop';
+			const container = document.createElement('div');
+			container.className = 'drag-drop-container';
+			const sentence = document.createElement('div');
+			sentence.innerHTML = question.sentence.replace('_____', '<div class="drop-zone" id="drop-zone">Drop here!</div>');
+			container.appendChild(sentence);
+			const draggables = document.createElement('div');
+			draggables.style.marginTop = '20px';
+			question.options.forEach(option => {
+				const draggable = document.createElement('div');
+				draggable.className = 'draggable';
+				draggable.textContent = option;
+				draggable.draggable = true;
+				draggable.ondragstart = dragStart;
+				draggable.ondragend = dragEnd;
+				draggables.appendChild(draggable);
+			});
+			container.appendChild(draggables);
+			optionsEl.appendChild(container);
+			setupDropZone();
+		} else if (question.type === 'matching') {
+			optionsEl.className = 'options matching';
+			const container = document.createElement('div');
+			container.innerHTML = '<h3 style="margin-bottom: 15px; color: #2d3436;">Match words with pictures!</h3>';
+			const wordsSection = document.createElement('div');
+			wordsSection.innerHTML = '<h4 style="color: #74b9ff; margin: 10px 0;">Words:</h4>';
+			const wordsContainer = document.createElement('div');
+			wordsContainer.className = 'matching-container';
+			const picturesSection = document.createElement('div');
+			picturesSection.innerHTML = '<h4 style="color: #fd79a8; margin: 10px 0;">Pictures:</h4>';
+			const picturesContainer = document.createElement('div');
+			picturesContainer.className = 'matching-container';
+			question.words.forEach(word => {
+				const div = document.createElement('div');
+				div.className = 'matching-item';
+				div.style.background = 'linear-gradient(45deg, #74b9ff, #0984e3)';
+				div.textContent = word;
+				div.onclick = () => selectMatchingItem(div, word);
+				wordsContainer.appendChild(div);
+			});
+			question.pictures.forEach(picture => {
+				const div = document.createElement('div');
+				div.className = 'matching-item';
+				div.style.background = 'linear-gradient(45deg, #fd79a8, #e84393)';
+				div.textContent = picture;
+				div.style.fontSize = '2rem';
+				div.onclick = () => selectMatchingItem(div, picture);
+				picturesContainer.appendChild(div);
+			});
+			wordsSection.appendChild(wordsContainer);
+			picturesSection.appendChild(picturesContainer);
+			container.appendChild(wordsSection);
+			container.appendChild(picturesSection);
+			optionsEl.appendChild(container);
+		}
+	}
+
+	function checkAnswer(selectedIndex) {
+		const question = questions[currentQuestionIndex];
+		const feedbackEl = document.getElementById('feedback');
+		if (selectedIndex === question.correct) {
+			showCorrectFeedback(question.feedback);
+			score += 10;
+			updateScore();
+		} else {
+			showIncorrectFeedback();
+		}
+	}
+
+	function dragStart(e) {
+		draggedElement = e.target;
+		e.target.classList.add('dragging');
+	}
+
+	function dragEnd(e) {
+		e.target.classList.remove('dragging');
+	}
+
+	function setupDropZone() {
+		const dropZone = document.getElementById('drop-zone');
+		if (!dropZone) return;
+		dropZone.ondragover = (e) => {
+			e.preventDefault();
+			dropZone.classList.add('drag-over');
+		};
+		dropZone.ondragleave = () => {
+			dropZone.classList.remove('drag-over');
+		};
+		dropZone.ondrop = (e) => {
+			e.preventDefault();
+			dropZone.classList.remove('drag-over');
+			if (draggedElement) {
+				const droppedText = draggedElement.textContent;
+				const question = questions[currentQuestionIndex];
+				if (droppedText === question.correct) {
+					dropZone.textContent = droppedText;
+					dropZone.style.background = 'linear-gradient(45deg, #00b894, #55efc4)';
+					dropZone.style.color = 'white';
+					draggedElement.style.display = 'none';
+					showCorrectFeedback(question.feedback);
+					score += 10;
+					updateScore();
+				} else {
+					showIncorrectFeedback();
+				}
+			}
+		};
+	}
+
+	function selectMatchingItem(element, item) {
+		if (element.classList.contains('matched')) return;
+		if (selectedMatchingItems.length === 0) {
+			element.classList.add('selected');
+			selectedMatchingItems.push({element, item});
+		} else if (selectedMatchingItems.length === 1) {
+			const firstSelection = selectedMatchingItems[0];
+			if (firstSelection.element === element) {
+				element.classList.remove('selected');
+				selectedMatchingItems = [];
+				return;
+			}
+			const question = questions[currentQuestionIndex];
+			let isMatch = false;
+			for (let pair of question.pairs) {
+				if ((pair[0] === firstSelection.item && pair[1] === item) ||
+					(pair[1] === firstSelection.item && pair[0] === item)) {
+					isMatch = true;
+					break;
+				}
+			}
+			if (isMatch) {
+				element.classList.add('matched');
+				firstSelection.element.classList.remove('selected');
+				firstSelection.element.classList.add('matched');
+				selectedMatchingItems = [];
+				const allMatched = document.querySelectorAll('.matching-item.matched').length === question.pairs.length * 2;
+				if (allMatched) {
+					showCorrectFeedback(question.feedback);
+					score += 10;
+					updateScore();
+				}
+			} else {
+				firstSelection.element.classList.remove('selected');
+				selectedMatchingItems = [];
+				showIncorrectFeedback();
+			}
+		}
+	}
+
+	function showCorrectFeedback(message) {
+		const feedbackEl = document.getElementById('feedback');
+		const starsEl = document.getElementById('stars');
+		const nextBtn = document.getElementById('next-btn');
+		feedbackEl.textContent = message;
+		feedbackEl.classList.add('show', 'correct');
+		starsEl.innerHTML = '⭐⭐⭐';
+		starsEl.style.display = 'flex';
+		setTimeout(() => {
+			nextBtn.classList.add('show');
+		}, 1000);
+		createCelebration();
+	}
+
+	function showIncorrectFeedback() {
+		const feedbackEl = document.getElementById('feedback');
+		feedbackEl.textContent = 'Oops! Try again! You can do it! 💪😊';
+		feedbackEl.classList.add('show', 'incorrect');
+		setTimeout(() => {
+			feedbackEl.classList.remove('show', 'incorrect');
+		}, 2000);
+	}
+
+	function nextQuestion() {
+		currentQuestionIndex++;
+		if (currentQuestionIndex >= questions.length) {
+			showGameComplete();
+		} else {
+			selectedMatchingItems = [];
+			loadQuestion();
+			updateQuestionCounter();
+		}
+	}
+
+	function updateScore() {
+		document.getElementById('score').textContent = score;
+	}
+
+	function updateQuestionCounter() {
+		document.getElementById('current-question').textContent = currentQuestionIndex + 1;
+	}
+
+	function updateProgress() {
+		const progressPercent = ((currentQuestionIndex) / questions.length) * 100;
+		document.getElementById('progress-fill').style.width = progressPercent + '%';
+	}
+
+	function showGameComplete() {
+		const gameContent = document.getElementById('game-content');
+		gameContent.innerHTML = `
+			<div class="game-complete">
+				<h2>🎉 Congratulations! 🎉</h2>
+				<p style="font-size: 1.5rem; margin: 20px 0;">You completed all questions!</p>
+				<p style="font-size: 2rem; margin: 20px 0;">Final Score: ${score} points!</p>
+				<div style="font-size: 3rem; margin: 20px 0;">⭐⭐⭐⭐⭐</div>
+				<p style="font-size: 1.3rem;">You're amazing! Keep learning and growing! 🌟📚</p>
+			</div>
+		`;
+		for (let i = 0; i < 100; i++) {
+			setTimeout(() => createCelebration(), i * 50);
+		}
+	}
+
+	function createCelebration() {
+		const celebration = document.getElementById('celebration');
+		const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd', '#98d8c8'];
+		for (let i = 0; i < 15; i++) {
+			const confetti = document.createElement('div');
+			confetti.className = 'confetti';
+			confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+			confetti.style.left = Math.random() * 100 + '%';
+			confetti.style.animationDelay = Math.random() * 2 + 's';
+			confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+			celebration.appendChild(confetti);
+			setTimeout(() => confetti.remove(), 5000);
+		}
+	}
+
+	function shuffleArray(array) {
+		for (let i = array.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[array[i], array[j]] = [array[j], array[i]];
+		}
+	}
+
+	// Initialize game
+	loadQuestion();
+	updateQuestionCounter();
 	</script>
 </body>
 </html>
